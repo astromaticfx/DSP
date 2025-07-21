@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TRANSPORTE DSP - Organizador de Serviços de Transporte</title>
+<style>
+  /* Reset e estilos básicos */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0; padding: 0;
+    background: #f5f5f5;
+    color: #222;
+    font-size: 0.65rem;
+  }
+  header {
+    background: #004080;
+    color: white;
+    padding: 0.25rem 0.2rem;
+    text-align: center;
+  }
+  main {
+    padding: 1rem;
+    max-width: 1200px;
+    margin: auto;
+  }
+  h1, h2 {
+    margin: 0 0 0.75rem 0;
+  }
+  button {
+    cursor: pointer;
+    background: #004080;
+    color: white;
+    border: none;
+    padding: 0.3rem 0.5rem;
+    margin: 0.3rem 0.1rem;
+    border-radius: 3px;
+    font-weight: bold;
+  }
+  button:disabled {
+    background: #aaa;
+    cursor: default;
+  }
+  input, select, textarea {
+    font-size: 1rem;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+  }
+  input[type="date"] {
+    padding: 0.25rem 0.5rem;
+  }
+  textarea {
+    resize: vertical;
+    min-height: 2.2em;
+    max-height: 4.5em;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 0.3rem 0.5rem;
+    text-align: center;
+    vertical-align: middle;
+  }
+  th {
+    background: #0070c0;
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  tr:nth-child(even) {
+    background: #e7f0fc;
+  }
+  .hidden {
+    display: none !important;
+  }
+  .flex-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .flex-grow {
+    flex-grow: 1;
+  }
+  .small-input {
+    width: 5rem;
+  }
+  .medium-input {
+    width: 8rem;
+  }
+  .large-input {
+    width: 15rem;
+  }
+  .checkbox-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .nowrap {
+    white-space: nowrap;
+  }
+  /* Scroll horizontal para tabelas grandes */
+  .table-wrapper {
+    overflow-x: auto;
+  }
+  /* Layout das páginas */
+  #page-editor, #page-viewer {
+    display: none;
+  }
+  #page-editor.active, #page-viewer.active {
+    display: block;
+  }
+  /* Estilos para a tabela da escala semanal */
+  #weekly-scale {
+    font-size: 0.85rem;
+  }
+  #weekly-scale th, #weekly-scale td {
+    min-width: 110px;
+    max-width: 140px;
+    word-break: break-word;
+  }
+  #weekly-scale th {
+    background: #004080;
+    color: white;
+  }
+  /* ALMOÇO centralizado */
+  .lunch-cell {
+    background: #80ff00;
+    font-weight: bold;
+    color: #6a4a00;
+  }
+  /* Botões de navegação */
+  nav {
+    background: #004080;
+    padding: 0.5rem;
+    text-align: center;
+  }
+  nav button {
+    margin: 0.2rem 0.3rem;
+  }
+  /* Inputs para data com máscara */
+  input.date-input {
+    width: 10rem;
+    font-size: 1rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+    text-align: center;
+  }
+  /* Fonte reduzida para impressão */
+  @media print {
+    body {
+      background: white;
+      color: black;
+      font-size: 9pt;
+    }
+    nav, #login-section, #page-editor button, #page-viewer button, #page-editor input:not([type="hidden"]), #page-editor select, #page-editor textarea {
+      display: none !important;
+    }
+    #weekly-scale {
+      font-size: 8pt;
+      page-break-inside: avoid;
+      width: 100%;
+    }
+    #weekly-scale th, #weekly-scale td {
+      min-width: auto;
+      max-width: none;
+      word-break: break-word;
+      padding: 0.15rem 0.3rem;
+    }
+    @page {
+      size: A4 landscape;
+      margin: 1cm;
+    }
+  }
+  /* Responsividade */
+  @media (max-width: 768px) {
+    #weekly-scale th, #weekly-scale td {
+      min-width: 90px;
+      font-size: 0.7rem;
+      padding: 0.2rem 0.3rem;
+    }
+    table, .table-wrapper {
+      font-size: 0.8rem;
+    }
+    nav button {
+      font-size: 0.9rem;
+      padding: 0.4rem 0.7rem;
+    }
+  }
+  /* Estilos para filtros na tabela editor */
+  #schedule-table thead tr.filters th {
+    background: #cce0ff;
+    padding: 0.15rem 0.3rem;
+  }
+  #schedule-table thead tr.filters th input,
+  #schedule-table thead tr.filters th select {
+    width: 90%;
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h2>TRANSPORTE/DISTRITO PETROLÂNDIA</h2>
+</header>
+
+<nav aria-label="Navegação principal">
+  <button id="btn-to-editor" aria-controls="page-editor" aria-expanded="false">Editor (Senha)</button>
+  <button id="btn-to-viewer" aria-controls="page-viewer" aria-expanded="true">Visualizador (Motoristas)</button>
+  <button id="btn-import-data-viewer" title="Importar dados atualizados" style="background-color: red;">Importar Dados</button>
+</nav>
+
+<main>
+
+<!-- Login e controle de acesso -->
+<section id="login-section" aria-label="Área de login do editor" style="max-width: 300px; margin: auto; padding: 1rem;">
+  <label for="password-input">Senha do Editor:</label>
+  <input type="password" id="password-input" aria-describedby="password-desc" autocomplete="off" />
+  <button id="btn-login">Entrar</button>
+  <button id="btn-change-password" style="display:none;">Alterar Senha</button>
+  <p id="password-desc" style="font-size: 0.9rem; color: #555;">digite a senha.</p>
+  <p id="login-message" role="alert" style="color: red; font-weight: bold;"></p>
+</section>
+
+<!-- Página 1: Editor -->
+<section id="page-editor" aria-label="Página de agendamento de serviços" tabindex="0">
+  <h2>Agendamentos de Serviços</h2>
+
+  <div class="flex-row" style="flex-wrap: nowrap; gap: 1rem; margin-bottom: 0.5rem;">
+    <button id="btn-add-row" title="Adicionar novo agendamento">+ Novo Agendamento</button>
+    <button id="btn-save-data" title="Salvar/exportar dados do agendamento">Salvar Dados</button>
+    <button id="btn-import-data-editor" title="Importar dados para editor">Importar Dados</button>
+    <button id="btn-delete-selected" title="Excluir agendamentos selecionados" disabled>Excluir Selecionados</button>
+    <button id="btn-logout" title="Sair do modo editor">Sair</button>
+  </div>
+
+  <div class="table-wrapper" style="max-height: 600px; overflow-y: auto;">
+    <table id="schedule-table" aria-describedby="schedule-desc" role="grid" aria-multiselectable="true">
+      <caption id="schedule-desc">Tabela de agendamentos com campos editáveis, seleção, filtros e ordenação</caption>
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="select-all" aria-label="Selecionar todos agendamentos" /></th>
+          <th data-col="date" tabindex="0" aria-sort="none" aria-label="Data (clique para ordenar)">Data</th>
+          <th data-col="day" aria-label="Dia da semana">Dia da Semana</th>
+          <th data-col="shift" tabindex="0" aria-sort="none" aria-label="Turno (clique para ordenar)">Turno</th>
+          <th data-col="time" tabindex="0" aria-sort="none" aria-label="Horário (clique para ordenar)">Horário</th>
+          <th data-col="description" aria-label="Descrição do serviço">Descrição</th>
+          <th data-col="driver" aria-label="Motorista">Motorista</th>
+          <th data-col="recurring" aria-label="Recorrente">Recorrente</th>
+          <th aria-label="Ações">Ações</th>
+        </tr>
+        <tr class="filters" aria-hidden="true">
+          <th></th>
+          <th><input type="text" id="filter-date" placeholder="Filtrar data" aria-label="Filtrar data (dd/mm/aaaa)" /></th>
+          <th><select id="filter-day" aria-label="Filtrar dia da semana"><option value="">Todos</option><option>Segunda-feira</option><option>Terça-feira</option><option>Quarta-feira</option><option>Quinta-feira</option><option>Sexta-feira</option><option>Sábado</option><option>Domingo</option></select></th>
+          <th><select id="filter-shift" aria-label="Filtrar turno"><option value="">Todos</option><option>manhã</option><option>tarde</option><option>noite</option></select></th>
+          <th><input type="text" id="filter-time" placeholder="Filtrar horário" aria-label="Filtrar horário (HH:MM)" /></th>
+          <th><input type="text" id="filter-description" placeholder="Filtrar descrição" aria-label="Filtrar descrição" /></th>
+          <th><select id="filter-driver" aria-label="Filtrar motorista"><option value="">Todos</option><option>------</option><option>ALEXIS</option><option>CRISTIANO</option><option>ZÉ HORTA</option><option>ZÉ MARIA</option><option>MAURO</option><option>CÍNTIA</option><option>motorista7</option><option>motorista8</option></select></th>
+          <th><select id="filter-recurring" aria-label="Filtrar recorrente"><option value="">Todos</option><option value="weekly">Sim</option><option value="none">Não</option></select></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="schedule-tbody" role="rowgroup">
+        <!-- Linhas de agendamento serão inseridas dinamicamente -->
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Página 2: Visualizador para motoristas -->
+<section id="page-viewer" aria-label="Visualização da escala semanal para motoristas" tabindex="0">
+  <h3>AGENDA TRANSPORTE - DISTRITO PETROLÂNDIA</h3>
+
+  <div class="flex-row" style="align-items: center; gap: 1rem; margin-bottom: 1rem;">
+    <label for="week-date-input">Data base da semana (segunda-feira):</label>
+    <input type="text" id="week-date-input" class="date-input" placeholder="dd/mm/aaaa" aria-describedby="week-date-desc" autocomplete="off" inputmode="numeric" />
+    <span id="week-date-desc" style="font-size: 0.9rem; color: #555;">Digite a data para visualizar a escala semanal. Formato automático: dd/mm/aaaa</span>
+    <button id="btn-filter-clear" title="Limpar filtros">Limpar Filtros</button>
+    <button id="btn-toggle-weekend" aria-pressed="false" title="Mostrar/Ocultar Sábado e Domingo">Mostrar Sáb/Dom</button>
+  </div>
+
+  <div class="table-wrapper" style="overflow-x: auto;">
+    <table id="weekly-scale" aria-describedby="weekly-desc" role="grid">
+      <caption id="weekly-desc">Escala semanal de agendamentos, organizada por dia e turno</caption>
+      <thead>
+        <tr id="weekdays-header">
+          <!-- Cabeçalho dias da semana será gerado dinamicamente -->
+        </tr>
+        <tr id="weekdays-date">
+          <!-- Datas correspondentes serão geradas dinamicamente -->
+        </tr>
+      </thead>
+      <tbody id="weekly-body">
+        <!-- Linhas de agendamentos serão geradas dinamicamente -->
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Input oculto para arquivo JSON importação -->
+<input type="file" id="file-import" accept="application/json" style="display:none" aria-hidden="true" />
+
+<script>
+(function() {
+  "use strict";
+
+  // --- Variáveis principais ---
+  let PASSWORD = '5678';
+  let isEditor = false;
+  let scheduleData = []; // Array de agendamentos
+  // Estrutura do agendamento:
+  // {
+  //   id: string (uuid),
+  //   date: string 'yyyy-mm-dd',
+  //   shift: 'manhã'|'tarde'|'noite',
+  //   time: string 'HH:MM',
+  //   description: string,
+  //   driver: string,
+  //   recurring: 'none'|'weekly'
+  // }
+
+  // --- Elementos DOM ---
+  const loginSection = document.getElementById('login-section');
+  const passwordInput = document.getElementById('password-input');
+  const btnLogin = document.getElementById('btn-login');
+  const btnChangePassword = document.getElementById('btn-change-password');
+  const loginMessage = document.getElementById('login-message');
+
+  const btnToEditor = document.getElementById('btn-to-editor');
+  const btnToViewer = document.getElementById('btn-to-viewer');
+
+  const pageEditor = document.getElementById('page-editor');
+  const pageViewer = document.getElementById('page-viewer');
+
+  // Editor page elements
+  const btnAddRow = document.getElementById('btn-add-row');
+  const btnSaveData = document.getElementById('btn-save-data');
+  const btnImportDataEditor = document.getElementById('btn-import-data-editor');
+  const btnDeleteSelected = document.getElementById('btn-delete-selected');
+  const btnLogout = document.getElementById('btn-logout');
+  const scheduleTableBody = document.getElementById('schedule-tbody');
+  const selectAllCheckbox = document.getElementById('select-all');
+
+  // Filtros editor
+  const filters = {
+    date: document.getElementById('filter-date'),
+    day: document.getElementById('filter-day'),
+    shift: document.getElementById('filter-shift'),
+    time: document.getElementById('filter-time'),
+    description: document.getElementById('filter-description'),
+    driver: document.getElementById('filter-driver'),
+    recurring: document.getElementById('filter-recurring'),
+  };
+
+  // Viewer page elements
+  const weekDateInput = document.getElementById('week-date-input');
+  const btnToggleWeekend = document.getElementById('btn-toggle-weekend');
+  const btnImportDataViewer = document.getElementById('btn-import-data-viewer');
+  const btnFilterClear = document.getElementById('btn-filter-clear');
+  const weeklyScaleTable = document.getElementById('weekly-scale');
+  const weekdaysHeader = document.getElementById('weekdays-header');
+  const weekdaysDate = document.getElementById('weekdays-date');
+  const weeklyBody = document.getElementById('weekly-body');
+
+  // File input for import
+  const fileImportInput = document.getElementById('file-import');
+
+  // Constants
+  const DRIVERS = ['------','ALEXIS','CRISTIANO','ZÉ HORTA','ZÉ MARIA','MAURO','CÍNTIA','motorista7','motorista8'];
+  const SHIFTS = ['manhã','tarde','noite'];
+  const MAX_AGENDAMENTOS = 50;
+
+  // --- Funções utilitárias ---
+
+  // Gera UUID simples para id
+  function generateUUID() {
+    return 'xxxx-xxxx-xxxx-xxxx'.replace(/[x]/g, function() {
+      return (Math.floor(Math.random() * 16)).toString(16);
+    });
+  }
+
+  // Formata data yyyy-mm-dd para dd/mm/aaaa
+  function formatDateBR(isoDate) {
+    if (!isoDate) return '';
+    const d = new Date(isoDate + 'T00:00:00');
+    if (isNaN(d)) return '';
+    const day = String(d.getDate()).padStart(2,'0');
+    const month = String(d.getMonth()+1).padStart(2,'0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
+  // Formata data yyyy-mm-dd para dd/mmm (ex: 01/jan)
+  function formatDateShort(isoDate) {
+    if (!isoDate) return '';
+    const d = new Date(isoDate + 'T00:00:00');
+    if (isNaN(d)) return '';
+    const day = String(d.getDate()).padStart(2,'0');
+    const monthNames = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    const month = monthNames[d.getMonth()];
+    return `${day}/${month}`;
+  }
+
+  // Retorna dia da semana em português (0=Domingo,...6=Sábado)
+  function dayOfWeekBR(date) {
+    // date = Date object
+    const days = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+    return days[date.getDay()];
+  }
+
+  // Converte dd/mm/aaaa para yyyy-mm-dd
+  function parseDateBR(str) {
+    if (!str) return null;
+    const parts = str.split('/');
+    if (parts.length !== 3) return null;
+    const [dd, mm, yyyy] = parts;
+    if (dd.length !== 2 || mm.length !== 2 || yyyy.length !== 4) return null;
+    const iso = `${yyyy}-${mm}-${dd}`;
+    if (isNaN(new Date(iso + 'T00:00:00'))) return null;
+    return iso;
+  }
+
+  // Ordena agendamentos por data, turno e horário
+  let currentSort = { col: 'date', asc: true };
+  function sortSchedule(data) {
+    const shiftOrder = { 'manhã': 1, 'tarde': 2, 'noite': 3 };
+    const col = currentSort.col;
+    const asc = currentSort.asc ? 1 : -1;
+    return data.slice().sort(function(a,b) {
+      let va, vb;
+      switch(col) {
+        case 'date':
+          va = a.date; vb = b.date;
+          break;
+        case 'day':
+          va = dayOfWeekBR(new Date(a.date + 'T00:00:00'));
+          vb = dayOfWeekBR(new Date(b.date + 'T00:00:00'));
+          break;
+        case 'shift':
+          va = shiftOrder[a.shift] || 99;
+          vb = shiftOrder[b.shift] || 99;
+          break;
+        case 'time':
+          va = a.time; vb = b.time;
+          break;
+        case 'description':
+          va = a.description.toLowerCase();
+          vb = b.description.toLowerCase();
+          break;
+        case 'driver':
+          va = a.driver.toLowerCase();
+          vb = b.driver.toLowerCase();
+          break;
+        case 'recurring':
+          va = a.recurring === 'weekly' ? 1 : 0;
+          vb = b.recurring === 'weekly' ? 1 : 0;
+          break;
+        default:
+          va = ''; vb = '';
+      }
+      if (va < vb) return -1 * asc;
+      if (va > vb) return 1 * asc;
+      return 0;
+    });
+  }
+
+  // Cria elemento option para select
+  function createOption(value, text) {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = text;
+    return opt;
+  }
+
+  // Cria linha de agendamento para editor
+  function createScheduleRow(agendamento) {
+    const tr = document.createElement('tr');
+    tr.setAttribute('role','row');
+    tr.dataset.id = agendamento.id;
+
+    // Checkbox seleção
+    const tdSelect = document.createElement('td');
+    tdSelect.className = 'checkbox-center';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'row-select';
+    checkbox.setAttribute('aria-label', 'Selecionar agendamento em ' + formatDateBR(agendamento.date) + ' ' + agendamento.shift + ' ' + agendamento.time);
+    tdSelect.appendChild(checkbox);
+    tr.appendChild(tdSelect);
+
+    // Data - input date
+    const tdDate = document.createElement('td');
+    const inputDate = document.createElement('input');
+    inputDate.type = 'date';
+    inputDate.value = agendamento.date;
+    inputDate.required = true;
+    inputDate.title = 'Data do agendamento';
+    inputDate.setAttribute('aria-label', 'Data do agendamento');
+    tdDate.appendChild(inputDate);
+    tr.appendChild(tdDate);
+
+    // Dia da semana - automático, não editável
+    const tdDay = document.createElement('td');
+    tdDay.textContent = agendamento.date ? dayOfWeekBR(new Date(agendamento.date + 'T00:00:00')) : '';
+    tr.appendChild(tdDay);
+
+    // Turno - select
+    const tdShift = document.createElement('td');
+    const selectShift = document.createElement('select');
+    selectShift.title = 'Turno do agendamento';
+    selectShift.setAttribute('aria-label', 'Turno do agendamento');
+    SHIFTS.forEach(function(s) {
+      selectShift.appendChild(createOption(s,s.charAt(0).toUpperCase()+s.slice(1)));
+    });
+    selectShift.value = agendamento.shift;
+    tdShift.appendChild(selectShift);
+    tr.appendChild(tdShift);
+
+    // Horário - input time
+    const tdTime = document.createElement('td');
+    const inputTime = document.createElement('input');
+    inputTime.type = 'time';
+    inputTime.value = agendamento.time;
+    inputTime.required = true;
+    inputTime.title = 'Horário do agendamento';
+    inputTime.setAttribute('aria-label', 'Horário do agendamento');
+    tdTime.appendChild(inputTime);
+    tr.appendChild(tdTime);
+
+    // Descrição - textarea (limitado a ~2 frases)
+    const tdDesc = document.createElement('td');
+    const textareaDesc = document.createElement('textarea');
+    textareaDesc.value = agendamento.description;
+    textareaDesc.maxLength = 100; // Limite razoável para 2 frases
+    textareaDesc.placeholder = 'Descrição do serviço';
+    textareaDesc.title = 'Descrição do serviço (até 2 frases)';
+    textareaDesc.setAttribute('aria-label', 'Descrição do serviço');
+    tdDesc.appendChild(textareaDesc);
+    tr.appendChild(tdDesc);
+
+    // Motorista - select
+    const tdDriver = document.createElement('td');
+    const selectDriver = document.createElement('select');
+    selectDriver.title = 'Motorista responsável';
+    selectDriver.setAttribute('aria-label', 'Motorista responsável');
+    DRIVERS.forEach(function(d) {
+      selectDriver.appendChild(createOption(d,d));
+    });
+    selectDriver.value = agendamento.driver;
+    tdDriver.appendChild(selectDriver);
+    tr.appendChild(tdDriver);
+
+    // Recorrente - checkbox semanal
+    const tdRecurring = document.createElement('td');
+    tdRecurring.className = 'checkbox-center';
+    
+    // Checkbox
+    const checkboxRecurring = document.createElement('input');
+    checkboxRecurring.type = 'checkbox';
+    checkboxRecurring.title = 'Agendamento recorrente semanalmente';
+    checkboxRecurring.setAttribute('aria-label', 'Agendamento recorrente semanalmente');
+    checkboxRecurring.checked = agendamento.recurring === 'weekly';
+    tdRecurring.appendChild(checkboxRecurring);
+    tr.appendChild(tdRecurring);
+
+    // Ações - botões salvar e excluir
+    const tdActions = document.createElement('td');
+    tdActions.className = 'nowrap';
+    
+    // Botão salvar linha
+    const btnSaveRow = document.createElement('button');
+    btnSaveRow.textContent = 'Salvar';
+    btnSaveRow.title = 'Salvar alterações deste agendamento';
+    btnSaveRow.type = 'button';
+    btnSaveRow.style.marginRight = '0.3rem';
+
+    // Botão excluir
+    const btnDeleteRow = document.createElement('button');
+    btnDeleteRow.textContent = 'Excluir';
+    btnDeleteRow.title = 'Excluir este agendamento';
+    btnDeleteRow.type = 'button';
+    btnDeleteRow.style.backgroundColor = '#b00020';
+
+    tdActions.appendChild(btnSaveRow);
+    tdActions.appendChild(btnDeleteRow);
+    tr.appendChild(tdActions);
+
+    // Eventos
+    btnSaveRow.addEventListener('click', function() {
+      if (saveRowData(tr)) {
+        alert('Agendamento salvo!');
+      }
+    });
+    btnDeleteRow.addEventListener('click', function() {
+      if (confirm('Confirma exclusão deste agendamento?')) {
+        deleteScheduleById(agendamento.id);
+        renderScheduleTable();
+      }
+    });
+    checkbox.addEventListener('change', updateDeleteSelectedButton);
+    inputDate.addEventListener('change', function() {
+      // Atualizar dia da semana automaticamente
+      const val = inputDate.value;
+      if (val) {
+        tdDay.textContent = dayOfWeekBR(new Date(val + 'T00:00:00'));
+      } else {
+        tdDay.textContent = '';
+      }
+    });
+
+    return tr;
+  }
+
+  // Atualiza estado do botão excluir selecionados
+  function updateDeleteSelectedButton() {
+    const anySelected = scheduleTableBody.querySelectorAll('input.row-select:checked').length > 0;
+    btnDeleteSelected.disabled = !anySelected;
+  }
+
+  // Salva dados da linha no scheduleData
+  function saveRowData(tr) {
+    const id = tr.dataset.id;
+    const inputDate = tr.querySelector('td:nth-child(2) input[type="date"]');
+    const selectShift = tr.querySelector('td:nth-child(4) select');
+    const inputTime = tr.querySelector('td:nth-child(5) input[type="time"]');
+    const textareaDesc = tr.querySelector('td:nth-child(6) textarea');
+    const selectDriver = tr.querySelector('td:nth-child(7) select');
+    const checkboxRecurring = tr.querySelector('td:nth-child(8) input[type="checkbox"]');
+
+    // Validações básicas
+    if (!inputDate.value) {
+      alert('Data é obrigatória.');
+      return false;
+    }
+    if (!selectShift.value) {
+      alert('Turno é obrigatório.');
+      return false;
+    }
+    if (!inputTime.value) {
+      alert('Horário é obrigatório.');
+      return false;
+    }
+    if (!textareaDesc.value.trim()) {
+      alert('Descrição é obrigatória.');
+      return false;
+    }
+    if (!selectDriver.value) {
+      alert('Motorista é obrigatório.');
+      return false;
+    }
+
+    // Atualiza no array
+    const idx = scheduleData.findIndex(function(a) { return a.id === id; });
+    if (idx === -1) {
+      alert('Erro: agendamento não encontrado.');
+      return false;
+    }
+    scheduleData[idx].date = inputDate.value;
+    scheduleData[idx].shift = selectShift.value;
+    scheduleData[idx].time = inputTime.value;
+    scheduleData[idx].description = textareaDesc.value.trim();
+    scheduleData[idx].driver = selectDriver.value;
+    scheduleData[idx].recurring = checkboxRecurring.checked ? 'weekly' : 'none';
+
+    // Atualiza dia da semana na célula
+    const tdDay = tr.children[2];
+    tdDay.textContent = dayOfWeekBR(new Date(inputDate.value + 'T00:00:00'));
+
+    // Reordena e renderiza para manter ordem correta
+    scheduleData = sortSchedule(scheduleData);
+    renderScheduleTable();
+
+    return true;
+  }
+
+  // Deleta agendamento pelo id
+  function deleteScheduleById(id) {
+    scheduleData = scheduleData.filter(function(a) { return a.id !== id; });
+  }
+
+  // Aplica filtros na tabela editor
+  function applyFilters(data) {
+    return data.filter(function(a) {
+      // Data filtro (dd/mm/aaaa)
+      if (filters.date.value.trim()) {
+        const fDate = filters.date.value.trim();
+        if (!formatDateBR(a.date).includes(fDate)) return false;
+      }
+      // Dia da semana
+      if (filters.day.value) {
+        const dayName = dayOfWeekBR(new Date(a.date + 'T00:00:00'));
+        if (dayName !== filters.day.value) return false;
+      }
+      // Turno
+      if (filters.shift.value) {
+        if (a.shift !== filters.shift.value) return false;
+      }
+      // Horário
+      if (filters.time.value.trim()) {
+        if (!a.time.includes(filters.time.value.trim())) return false;
+      }
+      // Descrição
+      if (filters.description.value.trim()) {
+        if (!a.description.toLowerCase().includes(filters.description.value.trim().toLowerCase())) return false;
+      }
+      // Motorista
+      if (filters.driver.value) {
+        if (a.driver !== filters.driver.value) return false;
+      }
+      // Recorrente
+      if (filters.recurring.value) {
+        if (filters.recurring.value === 'weekly' && a.recurring !== 'weekly') return false;
+        if (filters.recurring.value === 'none' && a.recurring !== 'none') return false;
+      }
+      return true;
+    });
+  }
+
+  // Renderiza tabela de agendamentos (editor)
+  function renderScheduleTable() {
+    scheduleTableBody.innerHTML = '';
+    let filtered = applyFilters(scheduleData);
+    filtered = sortSchedule(filtered);
+    filtered.forEach(function(ag) {
+      scheduleTableBody.appendChild(createScheduleRow(ag));
+    });
+    updateDeleteSelectedButton();
+    selectAllCheckbox.checked = false;
+  }
+
+  // Adiciona novo agendamento vazio
+  function addNewAgendamento() {
+    if (scheduleData.length >= MAX_AGENDAMENTOS) {
+      alert('Limite de ' + MAX_AGENDAMENTOS + ' agendamentos atingido.');
+      return;
+    }
+    const todayISO = new Date().toISOString().slice(0,10);
+    const newAg = {
+      id: generateUUID(),
+      date: '',
+      shift: '',
+      time: '',
+      description: '',
+      driver: DRIVERS[0],
+      recurring: 'none'
+    };
+    scheduleData.push(newAg);
+    renderScheduleTable();
+  }
+
+  // Salva dados no arquivo JSON para exportação
+  function saveDataToFile() {
+    if (scheduleData.length === 0) {
+      alert('Nenhum agendamento para salvar.');
+      return;
+    }
+    // Garante que todos os dados estejam salvos (força salvar todas as linhas)
+    const trs = scheduleTableBody.querySelectorAll('tr');
+    for (let i = 0; i < trs.length; i++) {
+      if (!saveRowData(trs[i])) {
+        alert('Corrija os dados antes de salvar.');
+        return;
+      }
+    }
+    const dataStr = JSON.stringify(scheduleData, null, 2);
+    const blob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'dspx.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    // Salva também no localStorage como último JSON importado
+    localStorage.setItem('transporte_dsp_last_imported', dataStr);
+  }
+
+  // Importa dados JSON (editor ou visualizador)
+  function importDataFromFile(file, callback) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const json = JSON.parse(e.target.result);
+        if (!Array.isArray(json)) throw new Error('Formato inválido');
+        // Validação básica dos objetos
+        for (let i = 0; i < json.length; i++) {
+          const item = json[i];
+          if (!item.id || !item.date || !item.shift || !item.time || !item.description || !item.driver) {
+            throw new Error('Dados incompletos no arquivo.');
+          }
+          // Corrige propriedades se necessário
+          if (!DRIVERS.includes(item.driver)) item.driver = DRIVERS[0];
+          if (!SHIFTS.includes(item.shift)) item.shift = 'manhã';
+          if (!item.recurring) item.recurring = 'none';
+        }
+        // Salva no localStorage como último JSON importado
+        localStorage.setItem('transporte_dsp_last_imported', JSON.stringify(json));
+        callback(json);
+      } catch(err) {
+        alert('Erro ao importar dados: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // --- Controle de acesso ---
+
+  function enterEditorMode() {
+    isEditor = true;
+    loginSection.style.display = 'none';
+    pageEditor.classList.add('active');
+    pageViewer.classList.remove('active');
+    btnToEditor.setAttribute('aria-expanded', 'true');
+    btnToViewer.setAttribute('aria-expanded', 'false');
+    btnToEditor.disabled = true;
+    btnToViewer.disabled = false;
+    btnChangePassword.style.display = 'inline-block';
+    renderScheduleTable();
+  }
+
+  function enterViewerMode() {
+    isEditor = false;
+    loginSection.style.display = 'none';
+    pageEditor.classList.remove('active');
+    pageViewer.classList.add('active');
+    btnToEditor.setAttribute('aria-expanded', 'false');
+    btnToViewer.setAttribute('aria-expanded', 'true');
+    btnToEditor.disabled = false;
+    btnToViewer.disabled = true;
+    btnChangePassword.style.display = 'none';
+    renderWeeklyScale();
+  }
+
+  // Inicialmente, só visualizador disponível (sem login)
+  function showLogin() {
+    loginSection.style.display = 'block';
+    pageEditor.classList.remove('active');
+    pageViewer.classList.add('active');
+    btnToEditor.setAttribute('aria-expanded', 'false');
+    btnToViewer.setAttribute('aria-expanded', 'true');
+    btnToEditor.disabled = false;
+    btnToViewer.disabled = true;
+    btnChangePassword.style.display = 'none';
+  }
+
+  // --- Eventos de navegação ---
+  btnToEditor.addEventListener('click', function() {
+    if (isEditor) {
+      // Já logado, só troca para editor
+      enterEditorMode();
+    } else {
+      // Mostra login para editor
+      loginSection.style.display = 'block';
+      pageEditor.classList.remove('active');
+      pageViewer.classList.remove('active');
+      btnToEditor.setAttribute('aria-expanded', 'false');
+      btnToViewer.setAttribute('aria-expanded', 'false');
+      btnToEditor.disabled = false;
+      btnToViewer.disabled = false;
+    }
+  });
+  
+  btnToViewer.addEventListener('click', function() {
+    enterViewerMode();
+  });
+
+  btnLogin.addEventListener('click', function() {
+    if (passwordInput.value === PASSWORD) {
+      loginMessage.textContent = '';
+      enterEditorMode();
+      passwordInput.value = '';
+    } else {
+      loginMessage.textContent = 'Senha incorreta!';
+    }
+  });
+
+  btnChangePassword.addEventListener('click', function() {
+    const newPassword = prompt('Digite a nova senha:');
+    if (newPassword !== null && newPassword.trim() !== '') {
+      PASSWORD = newPassword.trim();
+      alert('Senha alterada com sucesso!');
+    }
+  });
+
+  btnLogout.addEventListener('click', function() {
+    if (confirm('Deseja sair do modo editor?')) {
+      isEditor = false;
+      showLogin();
+    }
+  });
+
+  passwordInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') btnLogin.click();
+  });
+
+  // --- Filtros editor ---
+
+  Object.keys(filters).forEach(function(key) {
+    filters[key].addEventListener('input', renderScheduleTable);
+  });
+
+  // --- Ordenação editor ---
+
+  const headerCells = document.querySelectorAll('#schedule-table thead tr:first-child th[data-col]');
+  headerCells.forEach(function(th) {
+    th.style.cursor = 'pointer';
+    th.addEventListener('click', function() {
+      const col = th.dataset.col;
+      if (currentSort.col === col) {
+        currentSort.asc = !currentSort.asc;
+      } else {
+        currentSort.col = col;
+        currentSort.asc = true;
+      }
+      // Atualiza aria-sort
+      headerCells.forEach(function(h) {
+        h.setAttribute('aria-sort', h.dataset.col === col ? (currentSort.asc ? 'ascending' : 'descending') : 'none');
+      });
+      renderScheduleTable();
+    });
+  });
+
+  // --- Manipulação da tabela editor ---
+
+  btnAddRow.addEventListener('click', addNewAgendamento);
+
+  btnSaveData.addEventListener('click', saveDataToFile);
+
+  btnDeleteSelected.addEventListener('click', function() {
+    if (!confirm('Confirma exclusão dos agendamentos selecionados?')) return;
+    const checkboxes = scheduleTableBody.querySelectorAll('input.row-select:checked');
+    const idsToDelete = Array.from(checkboxes).map(function(cb) {
+      return cb.closest('tr').dataset.id;
+    });
+    scheduleData = scheduleData.filter(function(a) {
+      return !idsToDelete.includes(a.id);
+    });
+    renderScheduleTable();
+  });
+
+  selectAllCheckbox.addEventListener('change', function() {
+    const checked = selectAllCheckbox.checked;
+    scheduleTableBody.querySelectorAll('input.row-select').forEach(function(cb) {
+      cb.checked = checked;
+    });
+    updateDeleteSelectedButton();
+  });
+
+  btnImportDataEditor.addEventListener('click', function() {
+    fileImportInput.accept = 'application/json';
+    fileImportInput.onchange = function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      importDataFromFile(file, function(json) {
+        scheduleData = json;
+        renderScheduleTable();
+        alert('Dados importados com sucesso do arquivo: ' + file.name);
+      });
+      fileImportInput.value = '';
+    };
+    fileImportInput.click();
+  });
+
+  // --- Manipulação da página visualizador ---
+
+  // Máscara automática para input de data dd/mm/aaaa
+  weekDateInput.addEventListener('input', function(e) {
+    let val = weekDateInput.value.replace(/\D/g,'');
+    if (val.length > 8) val = val.slice(0,8);
+    if (val.length >= 5) {
+      val = val.slice(0,2) + '/' + val.slice(2,4) + '/' + val.slice(4);
+    } else if (val.length >= 3) {
+      val = val.slice(0,2) + '/' + val.slice(2);
+    }
+    weekDateInput.value = val;
+  });
+
+  // Quando perde o foco, tenta validar e formatar a data
+  weekDateInput.addEventListener('blur', function() {
+    const iso = parseDateBR(weekDateInput.value);
+    if (!iso) {
+      alert('Data inválida. Use formato dd/mm/aaaa.');
+      weekDateInput.focus();
+      return;
+    }
+    // Ajusta para segunda-feira da semana da data informada
+    const dt = new Date(iso + 'T00:00:00');
+    const day = dt.getDay();
+    // dia 1 = segunda-feira, no JS domingo=0
+    // Calcula diferença para segunda-feira (1)
+    const diff = (day === 0) ? -6 : 1 - day;
+    dt.setDate(dt.getDate() + diff);
+    const dd = String(dt.getDate()).padStart(2,'0');
+    const mm = String(dt.getMonth()+1).padStart(2,'0');
+    const yyyy = dt.getFullYear();
+    const newVal = `${dd}/${mm}/${yyyy}`;
+    weekDateInput.value = newVal;
+    renderWeeklyScale();
+  });
+
+  btnToggleWeekend.addEventListener('click', function() {
+    const pressed = btnToggleWeekend.getAttribute('aria-pressed') === 'true';
+    if (pressed) {
+      btnToggleWeekend.setAttribute('aria-pressed', 'false');
+      btnToggleWeekend.textContent = 'Mostrar Sáb/Dom';
+    } else {
+      btnToggleWeekend.setAttribute('aria-pressed', 'true');
+      btnToggleWeekend.textContent = 'Ocultar Sáb/Dom';
+    }
+    renderWeeklyScale();
+  });
+
+  btnImportDataViewer.addEventListener('click', function() {
+    fileImportInput.accept = 'application/json';
+    fileImportInput.onchange = function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      importDataFromFile(file, function(json) {
+        scheduleData = json;
+        alert('Dados importados com sucesso do arquivo: ' + file.name);
+        renderWeeklyScale();
+      });
+      fileImportInput.value = '';
+    };
+    fileImportInput.click();
+  });
+
+  btnFilterClear.addEventListener('click', function() {
+    // Limpa filtros e atualiza escala
+    weekDateInput.value = '';
+    renderWeeklyScale();
+  });
+
+  // --- Renderizar escala semanal ---
+
+  // Retorna array com as 7 datas da semana (segunda a domingo) a partir da data base (segunda)
+  function getWeekDates(baseDate) {
+    // baseDate = Date object (segunda-feira)
+    const dates = [];
+    for(let i=0; i<7; i++) {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() + i);
+      dates.push(d);
+    }
+    return dates;
+  }
+
+  // Filtra agendamentos para um dia, incluindo os recorrentes que caem naquele dia
+  function getAgendamentosForDate(date) {
+    // date = Date object
+    const isoDate = date.toISOString().slice(0,10);
+    const dayOfWeek = date.getDay(); // 0=Domingo ... 6=Sábado
+
+    // Filtra agendamentos que ocorrem neste dia OU são recorrentes semanais neste dia e a data é posterior ou igual ao agendamento original
+    return scheduleData.filter(function(a) {
+      if (!a.date) return false;
+      if (a.date === isoDate) return true;
+      if (a.recurring === 'weekly') {
+        // Se agendamento original é antes ou igual a esta data e dia da semana bate
+        const originalDate = new Date(a.date + 'T00:00:00');
+        if (originalDate > date) return false;
+        const originalDay = originalDate.getDay();
+        return originalDay === dayOfWeek;
+      }
+      return false;
+    });
+  }
+
+  // Renderiza a tabela semanal
+  function renderWeeklyScale() {
+    // Limpa tabela
+    weekdaysHeader.innerHTML = '';
+    weekdaysDate.innerHTML = '';
+    weeklyBody.innerHTML = '';
+
+    // Obtem data base da semana
+    let baseDate;
+    if (weekDateInput.value) {
+      const iso = parseDateBR(weekDateInput.value);
+      if (!iso) {
+        weeklyScaleTable.style.display = 'none';
+        return;
+      }
+      // Ajusta para segunda-feira da semana
+      const dt = new Date(iso + 'T00:00:00');
+      const day = dt.getDay();
+      const diff = (day === 0) ? -6 : 1 - day;
+      dt.setDate(dt.getDate() + diff);
+      baseDate = dt;
+    } else {
+      // Se não informado, usa segunda-feira desta semana atual
+      const today = new Date();
+      const day = today.getDay();
+      const diff = (day === 0) ? -6 : 1 - day;
+      baseDate = new Date(today);
+      baseDate.setDate(today.getDate() + diff);
+    }
+
+    weeklyScaleTable.style.display = 'table';
+
+    const dates = getWeekDates(baseDate);
+
+    // Verifica se sábado e domingo devem ser ocultados
+    const showWeekend = btnToggleWeekend.getAttribute('aria-pressed') === 'true';
+
+    // Cabeçalho dias da semana (segunda a domingo)
+    const dayNames = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+    for(let i=0; i<7; i++) {
+      if (!showWeekend && (i === 5 || i === 6)) continue;
+      const th = document.createElement('th');
+      th.scope = 'col';
+      th.textContent = dayNames[i];
+      weekdaysHeader.appendChild(th);
+    }
+    // Datas (dd/mmm)
+    for(let i=0; i<7; i++) {
+      if (!showWeekend && (i === 5 || i === 6)) continue;
+      const th = document.createElement('th');
+      th.textContent = formatDateShort(dates[i].toISOString().slice(0,10));
+      weekdaysDate.appendChild(th);
+    }
+
+    // Montar linhas: manhã e tarde com almoço no meio, noite separado abaixo
+
+    // Para cada dia, obter agendamentos e separar por turno
+    // Manhã: até 11:59, almoço 12:00-13:00, tarde 13:00-18:59, noite 19:00+
+
+    // Vamos montar 3 linhas:
+    // Linha 1: turnos manhã (08:00 até 11:59)
+    // Linha 2: célula ALMOÇO (única, centralizada, ocupa 1 linha e 7 colunas)
+    // Linha 3: turnos tarde (13:00 até 18:59)
+    // Linha 4: turnos noite (19:00+)
+
+    // Para alinhamento, precisamos saber o máximo de agendamentos em qualquer dia/turno para definir quantidade de sublinhas
+
+    // Função auxiliar para filtrar agendamentos por turno e ordenar por horário
+    function filterByTurno(agendamentos, turno) {
+      return agendamentos.filter(function(a) {
+        if (a.shift !== turno) return false;
+        return true;
+      }).sort(function(a,b) {
+        return a.time.localeCompare(b.time);
+      });
+    }
+
+    // Para cada dia, obter agendamentos incluindo recorrentes
+    const weekAgendamentos = dates.map(function(d) {
+      return getAgendamentosForDate(d);
+    });
+
+    // Dividir por turno
+    const turnos = ['manhã', 'tarde', 'noite'];
+    // Para cada turno, obter máximo de agendamentos em qualquer dia (para definir linhas)
+    const maxRowsPerTurno = {};
+    for (let i = 0; i < turnos.length; i++) {
+      const turno = turnos[i];
+      let maxCount = 0;
+      for (let j = 0; j < weekAgendamentos.length; j++) {
+        const dayAgs = weekAgendamentos[j];
+        const count = dayAgs.filter(function(a) {
+          return a.shift === turno;
+        }).length;
+        if (count > maxCount) maxCount = count;
+      }
+      maxRowsPerTurno[turno] = maxCount;
+    }
+
+    // Linha ALMOÇO ocupa uma linha, 7 colunas (ou 5 se fim de semana oculto)
+    // Construção das linhas:
+
+    // Linha 1: manhã agendamentos (maxRowsPerTurno['manhã'] linhas)
+    for (let row=0; row<maxRowsPerTurno['manhã']; row++) {
+      const tr = document.createElement('tr');
+      for(let i=0; i<7; i++) {
+        if (!showWeekend && (i === 5 || i === 6)) continue;
+        const td = document.createElement('td');
+        td.style.minWidth = '110px';
+        const ags = filterByTurno(weekAgendamentos[i], 'manhã');
+        if (ags[row]) {
+          td.innerHTML = '<strong>' + ags[row].time + '</strong><br>' + escapeHtml(ags[row].description) + '<br><em>' + ags[row].driver + '</em>';
+        }
+        tr.appendChild(td);
+      }
+      weeklyBody.appendChild(tr);
+    }
+
+    // Linha ALMOÇO
+    const trLunch = document.createElement('tr');
+    const tdLunch = document.createElement('td');
+    tdLunch.className = 'lunch-cell';
+    tdLunch.textContent = 'ALMOÇO (12:00 às 13:00)';
+    tdLunch.colSpan = showWeekend ? 7 : 5;
+    trLunch.appendChild(tdLunch);
+    weeklyBody.appendChild(trLunch);
+
+    // Linha 3: tarde agendamentos
+    for (let row=0; row<maxRowsPerTurno['tarde']; row++) {
+      const tr = document.createElement('tr');
+      for(let i=0; i<7; i++) {
+        if (!showWeekend && (i === 5 || i === 6)) continue;
+        const td = document.createElement('td');
+        td.style.minWidth = '110px';
+        const ags = filterByTurno(weekAgendamentos[i], 'tarde');
+        if (ags[row]) {
+          td.innerHTML = '<strong>' + ags[row].time + '</strong><br>' + escapeHtml(ags[row].description) + '<br><em>' + ags[row].driver + '</em>';
+        }
+        tr.appendChild(td);
+      }
+      weeklyBody.appendChild(tr);
+    }
+
+    // Linha 4: noite agendamentos
+    for (let row=0; row<maxRowsPerTurno['noite']; row++) {
+      const tr = document.createElement('tr');
+      for(let i=0; i<7; i++) {
+        if (!showWeekend && (i === 5 || i === 6)) continue;
+        const td = document.createElement('td');
+        td.style.minWidth = '110px';
+        const ags = filterByTurno(weekAgendamentos[i], 'noite');
+        if (ags[row]) {
+          td.innerHTML = '<strong>' + ags[row].time + '</strong><br>' + escapeHtml(ags[row].description) + '<br><em>' + ags[row].driver + '</em>';
+        }
+        tr.appendChild(td);
+      }
+      weeklyBody.appendChild(tr);
+    }
+  }
+
+  // Escape HTML para segurança e evitar quebra de layout
+  function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/[&<>"']/g, function(m) {
+      switch(m) {
+        case '&': return '&amp;';
+        case '<': return '&lt;';
+        case '>': return '&gt;';
+        case '"': return '&quot;';
+        case "'": return '&#39;';
+        default: return m;
+      }
+    });
+  }
+
+  // --- Inicialização ---
+
+  // Carrega dados do localStorage se existir (para persistência simples)
+  function loadDataFromStorage() {
+    try {
+      // Primeiro tenta carregar o último JSON importado
+      const lastImported = localStorage.getItem('transporte_dsp_last_imported');
+      if (lastImported) {
+        const arr = JSON.parse(lastImported);
+        if (Array.isArray(arr)) {
+          scheduleData = arr;
+          // Verifica se está no modo editor
+          const editorFlag = localStorage.getItem('transporte_dsp_isEditor');
+          if (editorFlag === 'true') {
+            isEditor = true;
+            enterEditorMode();
+          } else {
+            enterViewerMode();
+          }
+          return;
+        }
+      }
+      
+      // Se não tiver último JSON importado, carrega dados antigos
+      const json = localStorage.getItem('transporte_dsp_schedule');
+      if (json) {
+        const arr = JSON.parse(json);
+        if (Array.isArray(arr)) scheduleData = arr;
+      }
+      const editorFlag = localStorage.getItem('transporte_dsp_isEditor');
+      if (editorFlag === 'true') {
+        isEditor = true;
+        enterEditorMode();
+      } else {
+        showLogin();
+      }
+    } catch(e) {
+      // Ignorar erros
+      showLogin();
+    }
+  }
+
+  // Salva dados no localStorage
+  function saveDataToStorage() {
+    try {
+      localStorage.setItem('transporte_dsp_schedule', JSON.stringify(scheduleData));
+      localStorage.setItem('transporte_dsp_isEditor', isEditor ? 'true' : 'false');
+    } catch(e) {
+      // Ignorar erros
+    }
+  }
+
+  // Salva dados localStorage periodicamente e ao sair
+  window.addEventListener('beforeunload', saveDataToStorage);
+
+  // Inicializa
+  function init() {
+    loadDataFromStorage();
+    // Mostra visualizador por padrão
+    enterViewerMode();
+  }
+
+  init();
+
+})();
+</script>
+
+</body>
+</html>
